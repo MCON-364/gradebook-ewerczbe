@@ -20,7 +20,6 @@ public class Gradebook {
             return false;
         }
         gradesByStudent.put(name, new ArrayList<>());
-        undoStack.push(gb -> gb.gradesByStudent.remove(name));
         activityLog.add("Added student " + name);
         return true;
     }
@@ -35,6 +34,7 @@ public class Gradebook {
         undoStack.push(gb -> {
             if (!gradeList.isEmpty()) {
                 gradeList.remove(gradeList.size() - 1);
+                gb.activityLog.add("Undo: removed grade " + grade + " for " + name);
             }
         });
         activityLog.add("Added grade " + grade + " for " + name);
@@ -48,7 +48,10 @@ public class Gradebook {
         }
         List<Integer> originalGrades = new ArrayList<>(gradesOptional.get());
         gradesByStudent.remove(name);
-        undoStack.push(gb -> gb.gradesByStudent.put(name, new ArrayList<>(originalGrades)));
+        undoStack.push(gb -> {
+            gb.gradesByStudent.put(name, new ArrayList<>(originalGrades));
+            gb.activityLog.add("Undo: restored student " + name);
+        });
         activityLog.add("Removed student " + name);
         return true;
     }

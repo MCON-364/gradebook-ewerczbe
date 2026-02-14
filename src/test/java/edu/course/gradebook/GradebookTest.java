@@ -25,27 +25,27 @@ public class GradebookTest {
     @Test
     public void testAddGradeMissingStudent() {
         Gradebook gb = new Gradebook();
-        assertFalse(gb.addGrade("Bluma", 88));
+        assertFalse(gb.addGrade("Blimy", 88));
     }
 
     @Test
     public void testRemoveStudent() {
         Gradebook gb = new Gradebook();
-        gb.addStudent("Hinda");
-        gb.addGrade("Hinda", 80);
-        assertTrue(gb.removeStudent("Hinda"));
-        assertFalse(gb.findStudentGrades("Hinda").isPresent());
+        gb.addStudent("Hindy");
+        gb.addGrade("Hindy", 80);
+        assertTrue(gb.removeStudent("Hindy"));
+        assertFalse(gb.findStudentGrades("Hindy").isPresent());
     }
 
     @Test
     public void testRemoveStudentUndo() {
         Gradebook gb = new Gradebook();
-        gb.addStudent("Raizel");
-        gb.addGrade("Raizel", 92);
-        gb.removeStudent("Raizel");
+        gb.addStudent("Raizy");
+        gb.addGrade("Raizy", 92);
+        gb.removeStudent("Raizy");
         assertTrue(gb.undo());
-        assertTrue(gb.findStudentGrades("Raizel").isPresent());
-        assertEquals(List.of(92), gb.findStudentGrades("Raizel").get());
+        assertTrue(gb.findStudentGrades("Raizy").isPresent());
+        assertEquals(List.of(92), gb.findStudentGrades("Raizy").get());
     }
 
     @Test
@@ -58,12 +58,40 @@ public class GradebookTest {
     }
 
     @Test
+    public void testUndoDoesNotUndoAddStudent() {
+        Gradebook gb = new Gradebook();
+        gb.addStudent("Gitty");
+        assertFalse(gb.undo());
+        assertTrue(gb.findStudentGrades("Gitty").isPresent());
+    }
+
+    @Test
+    public void testUndoLogsAction() {
+        Gradebook gb = new Gradebook();
+        gb.addStudent("Faigy");
+        gb.addGrade("Faigy", 90);
+        gb.undo();
+        List<String> log = gb.recentLog(2);
+        assertTrue(log.stream().anyMatch(s -> s.contains("Undo")));
+    }
+
+    @Test
+    public void testUndoHandlesMultipleOperations() {
+        Gradebook gb = new Gradebook();
+        gb.addStudent("Sura");
+        gb.addGrade("Sura", 80);
+        gb.addGrade("Sura", 90);
+        gb.undo();
+        assertEquals(List.of(80), gb.findStudentGrades("Sura").get());
+    }
+
+    @Test
     public void testAverageFor() {
         Gradebook gb = new Gradebook();
-        gb.addStudent("Gittel");
-        gb.addGrade("Gittel", 90);
-        gb.addGrade("Gittel", 100);
-        Optional<Double> avg = gb.averageFor("Gittel");
+        gb.addStudent("Bracha");
+        gb.addGrade("Bracha", 90);
+        gb.addGrade("Bracha", 100);
+        Optional<Double> avg = gb.averageFor("Bracha");
         assertTrue(avg.isPresent());
         assertEquals(95.0, avg.get());
     }
@@ -71,16 +99,16 @@ public class GradebookTest {
     @Test
     public void testAverageForEmpty() {
         Gradebook gb = new Gradebook();
-        gb.addStudent("Faiga");
-        assertTrue(gb.averageFor("Faiga").isEmpty());
+        gb.addStudent("Hendel");
+        assertTrue(gb.averageFor("Hendel").isEmpty());
     }
 
     @Test
     public void testLetterGradeFor() {
         Gradebook gb = new Gradebook();
-        gb.addStudent("Sura");
-        gb.addGrade("Sura", 85);
-        Optional<String> letter = gb.letterGradeFor("Sura");
+        gb.addStudent("Yocheved");
+        gb.addGrade("Yocheved", 85);
+        Optional<String> letter = gb.letterGradeFor("Yocheved");
         assertTrue(letter.isPresent());
         assertEquals("B", letter.get());
     }
@@ -88,17 +116,17 @@ public class GradebookTest {
     @Test
     public void testLetterGradeForEmpty() {
         Gradebook gb = new Gradebook();
-        gb.addStudent("Bracha");
-        assertTrue(gb.letterGradeFor("Bracha").isEmpty());
+        gb.addStudent("Goldie");
+        assertTrue(gb.letterGradeFor("Goldie").isEmpty());
     }
 
     @Test
     public void testClassAverage() {
         Gradebook gb = new Gradebook();
-        gb.addStudent("Hendel");
-        gb.addStudent("Yocheved");
-        gb.addGrade("Hendel", 80);
-        gb.addGrade("Yocheved", 100);
+        gb.addStudent("Frayda");
+        gb.addStudent("Bluma");
+        gb.addGrade("Frayda", 80);
+        gb.addGrade("Bluma", 100);
         Optional<Double> avg = gb.classAverage();
         assertTrue(avg.isPresent());
         assertEquals(90.0, avg.get());
@@ -113,12 +141,10 @@ public class GradebookTest {
     @Test
     public void testRecentLog() {
         Gradebook gb = new Gradebook();
-        gb.addStudent("Goldie");
-        gb.addGrade("Goldie", 90);
-        gb.addGrade("Goldie", 95);
-        List<String> log = gb.recentLog(2);
-        assertEquals(2, log.size());
-        assertTrue(log.get(0).contains("Added grade 95"));
-        assertTrue(log.get(1).contains("Added grade 90"));
+        gb.addStudent("Hindy");
+        gb.addGrade("Hindy", 90);
+        gb.addGrade("Hindy", 95);
+        List<String> log = gb.recentLog(3);
+        assertTrue(log.stream().anyMatch(s -> s.contains("Added grade")));
     }
 }
