@@ -32,10 +32,8 @@ public class Gradebook {
         List<Integer> gradeList = gradesOptional.get();
         gradeList.add(grade);
         undoStack.push(gb -> {
-            if (!gradeList.isEmpty()) {
-                gradeList.remove(gradeList.size() - 1);
-                gb.activityLog.add("Undo: removed grade " + grade + " for " + name);
-            }
+            gradeList.remove(Integer.valueOf(grade));
+            gb.activityLog.add("Undo: removed grade " + grade + " for " + name);
         });
         activityLog.add("Added grade " + grade + " for " + name);
         return true;
