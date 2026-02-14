@@ -31,9 +31,10 @@ public class Gradebook {
         }
         List<Integer> gradeList = gradesOptional.get();
         gradeList.add(grade);
+        int addedGrade = grade; // capture the value
         undoStack.push(gb -> {
-            gradeList.remove(Integer.valueOf(grade));
-            gb.activityLog.add("Undo: removed grade " + grade + " for " + name);
+            gradeList.remove(Integer.valueOf(addedGrade));
+            gb.activityLog.add("Undo: removed grade " + addedGrade + " for " + name);
         });
         activityLog.add("Added grade " + grade + " for " + name);
         return true;
