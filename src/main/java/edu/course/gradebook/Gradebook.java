@@ -20,6 +20,7 @@ public class Gradebook {
             return false;
         }
         gradesByStudent.put(name, new ArrayList<>());
+        undoStack.push(gb -> gb.gradesByStudent.remove(name));
         activityLog.add("Added student " + name);
         return true;
     }
@@ -29,18 +30,13 @@ public class Gradebook {
         if (gradesOptional.isEmpty()) {
             return false;
         }
-
         List<Integer> gradeList = gradesOptional.get();
         gradeList.add(grade);
-
-        List<Integer> listForUndo = gradeList;
-
         undoStack.push(gb -> {
-            if (!listForUndo.isEmpty()) {
-                listForUndo.remove(listForUndo.size() - 1);
+            if (!gradeList.isEmpty()) {
+                gradeList.remove(gradeList.size() - 1);
             }
         });
-
         activityLog.add("Added grade " + grade + " for " + name);
         return true;
     }
@@ -50,106 +46,69 @@ public class Gradebook {
         if (gradesOptional.isEmpty()) {
             return false;
         }
-
         List<Integer> originalGrades = new ArrayList<>(gradesOptional.get());
         gradesByStudent.remove(name);
-
         undoStack.push(gb -> gb.gradesByStudent.put(name, new ArrayList<>(originalGrades)));
-
         activityLog.add("Removed student " + name);
         return true;
-    }
-
-    public Optional<Double> averageFor(String name) {
-        var gradesOpt = findStudentGrades(name);
-        if (gradesOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        var grades = gradesOpt.get();
-        if (grades.isEmpty()) {
-            return Optional.empty();
-        }
-
-        double sum = 0.0;
-        for (var g : grades) {
-            sum += g;
-        }
-
-        double avg = sum / grades.size();
-        return Optional.of(avg);
-    }
-
-    public Optional<String> letterGradeFor(String name) {
-        var avgOpt = averageFor(name);
-        if (avgOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        double avg = avgOpt.get();
-        int bucket = (int) avg / 10;
-
-        String letter = switch (bucket) {
-            case 10, 9 -> {
-                yield "A";
-            }
-            case 8 -> {
-                yield "B";
-            }
-            case 7 -> {
-                yield "C";
-            }
-            case 6 -> {
-                yield "D";
-            }
-            default -> {
-                yield "F";
-            }
-        };
-
-        return Optional.of(letter);
-    }
-
-    public Optional<Double> classAverage() {
-        double sum = 0.0;
-        int count = 0;
-
-        for (var entry : gradesByStudent.values()) {
-            for (var grade : entry) {
-                sum += grade;
-                count++;
-            }
-        }
-
-        if (count == 0) {
-            return Optional.empty();
-        }
-
-        double avg = sum / count;
-        return Optional.of(avg);
     }
 
     public boolean undo() {
         if (undoStack.isEmpty()) {
             return false;
         }
-
         UndoAction action = undoStack.pop();
         action.undo(this);
         activityLog.add("Undid last action");
         return true;
     }
 
-    public List<String> recentLog(int maxItems) {
-        if (maxItems <= 0) {
+    public Optional<Double> averageFor(String name) {
+        Optional<List<Integer>> gradesOptional = findStudentGrades(name);
+        if (gradesOptional.isEmpty() || gradesOptional.get().isEmpty()) {
+            return Optional.empty();
+        }
+        List<Integer> grades = gradesOptional.get();
+        double avg = grades.stream().mapToInt(Integer::intValue).average().orElse(Double.NaN);
+        return Optional.of(avg);
+    }
+
+    public Optional<String> letterGradeFor(String name) {
+        Optional<Double> avgOptional = averageFor(name);
+        if (avgOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        double avg = avgOptional.get();
+        if (avg >= 90) return Optional.of("A");
+        if (avg >= 80) return Optional.of("B");
+        if (avg >= 70) return Optional.of("C");
+        if (avg >= 60) return Optional.of("D");
+        return Optional.of("F");
+    }
+
+    public Optional<Double> classAverage() {
+        if (gradesByStudent.isEmpty()) {
+            return Optional.empty();
+        }
+        List<Integer> allGrades = gradesByStudent.values().stream()
+                .flatMap(Collection::stream)
+                .toList();
+        if (allGrades.isEmpty()) {
+            return Optional.empty();
+        }
+        double avg = allGrades.stream().mapToInt(Integer::intValue).average().orElse(Double.NaN);
+        return Optional.of(avg);
+    }
+
+    public List<String> recentLog(int n) {
+        int size = activityLog.size();
+        if (size == 0) {
             return List.of();
         }
-
-        var result = new ArrayList<String>();
-        var it = activityLog.descendingIterator();
-        while (it.hasNext() && result.size() < maxItems) {
-            result.add(it.next());
-        }
-        return result;
+        int fromIndex = Math.max(size - n, 0);
+        List<String> subList = activityLog.subList(fromIndex, size);
+        List<String> reversed = new ArrayList<>(subList);
+        Collections.reverse(reversed);
+        return reversed;
     }
 }
