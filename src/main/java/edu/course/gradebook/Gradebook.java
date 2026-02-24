@@ -13,34 +13,117 @@ public class Gradebook {
     }
 
     public boolean addStudent(String name) {
-        throw new UnsupportedOperationException();
+        if (name == null) {
+            throw new IllegalArgumentException("name is null");
+        }
+        if (gradesByStudent.containsKey(name)) {
+            return false;
+        }
+        gradesByStudent.put(name, new ArrayList<>());
+        activityLog.add("Added student " + name);
+        return true;
     }
 
     public boolean addGrade(String name, int grade) {
-        throw new UnsupportedOperationException();
+        Optional<List<Integer>> gradesOptional = findStudentGrades(name);
+        if (gradesOptional.isEmpty()) {
+            return false;
+        }
+        List<Integer> gradeList = gradesOptional.get();
+
+        // Capture the grade that was added
+        gradeList.add(grade);
+
+        // Prepare the undo action that removes the last grade added
+        undoStack.push(gb -> {
+            // Fetch the student's grades again to ensure we're working with the latest state
+            Optional<List<Integer>> updatedGradesOptional = gb.findStudentGrades(name);
+            if (updatedGradesOptional.isPresent()) {
+                List<Integer> updatedGradeList = updatedGradesOptional.get();
+                // Remove the last grade in the list (undo the addition)
+                if (!updatedGradeList.isEmpty()) {
+                    updatedGradeList.remove(updatedGradeList.size() - 1);
+                }
+            }
+            gb.activityLog.add("Undo: removed last grade for " + name);
+        });
+
+        // Log the addition of the grade
+        activityLog.add("Added grade " + grade + " for " + name);
+        return true;
     }
 
     public boolean removeStudent(String name) {
-        throw new UnsupportedOperationException();
-    }
-
-    public Optional<Double> averageFor(String name) {
-        throw new UnsupportedOperationException();
-    }
-
-    public Optional<String> letterGradeFor(String name) {
-        throw new UnsupportedOperationException();
-    }
-
-    public Optional<Double> classAverage() {
-        throw new UnsupportedOperationException();
+        Optional<List<Integer>> gradesOptional = findStudentGrades(name);
+        if (gradesOptional.isEmpty()) {
+            return false;
+        }
+        List<Integer> originalGrades = new ArrayList<>(gradesOptional.get());
+        gradesByStudent.remove(name);
+        undoStack.push(gb -> {
+            gb.gradesByStudent.put(name, new ArrayList<>(originalGrades));
+            gb.activityLog.add("Undo: restored student " + name);
+        });
+        activityLog.add("Removed student " + name);
+        return true;
     }
 
     public boolean undo() {
-        throw new UnsupportedOperationException();
+        if (undoStack.isEmpty()) {
+            return false;
+        }
+        UndoAction action = undoStack.pop();
+        action.undo(this);
+        activityLog.add("Undid last action");
+        return true;
     }
 
-    public List<String> recentLog(int maxItems) {
-        throw new UnsupportedOperationException();
+    public Optional<Double> averageFor(String name) {
+        Optional<List<Integer>> gradesOptional = findStudentGrades(name);
+        if (gradesOptional.isEmpty() || gradesOptional.get().isEmpty()) {
+            return Optional.empty();
+        }
+        List<Integer> grades = gradesOptional.get();
+        double avg = grades.stream().mapToInt(Integer::intValue).average().orElse(Double.NaN);
+        return Optional.of(avg);
+    }
+
+    public Optional<String> letterGradeFor(String name) {
+        Optional<Double> avgOptional = averageFor(name);
+        if (avgOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        double avg = avgOptional.get();
+        if (avg >= 90) return Optional.of("A");
+        if (avg >= 80) return Optional.of("B");
+        if (avg >= 70) return Optional.of("C");
+        if (avg >= 60) return Optional.of("D");
+        return Optional.of("F");
+    }
+
+    public Optional<Double> classAverage() {
+        if (gradesByStudent.isEmpty()) {
+            return Optional.empty();
+        }
+        List<Integer> allGrades = gradesByStudent.values().stream()
+                .flatMap(Collection::stream)
+                .toList();
+        if (allGrades.isEmpty()) {
+            return Optional.empty();
+        }
+        double avg = allGrades.stream().mapToInt(Integer::intValue).average().orElse(Double.NaN);
+        return Optional.of(avg);
+    }
+
+    public List<String> recentLog(int n) {
+        int size = activityLog.size();
+        if (size == 0) {
+            return List.of();
+        }
+        int fromIndex = Math.max(size - n, 0);
+        List<String> subList = activityLog.subList(fromIndex, size);
+        List<String> reversed = new ArrayList<>(subList);
+        Collections.reverse(reversed);
+        return reversed;
     }
 }
