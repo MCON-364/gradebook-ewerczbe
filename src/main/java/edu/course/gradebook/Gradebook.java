@@ -30,12 +30,25 @@ public class Gradebook {
             return false;
         }
         List<Integer> gradeList = gradesOptional.get();
+
+        // Capture the grade that was added
         gradeList.add(grade);
-        int addedGrade = grade; // capture the value
+
+        // Prepare the undo action that removes the last grade added
         undoStack.push(gb -> {
-            gradeList.remove(Integer.valueOf(addedGrade));
-            gb.activityLog.add("Undo: removed grade " + addedGrade + " for " + name);
+            // Fetch the student's grades again to ensure we're working with the latest state
+            Optional<List<Integer>> updatedGradesOptional = gb.findStudentGrades(name);
+            if (updatedGradesOptional.isPresent()) {
+                List<Integer> updatedGradeList = updatedGradesOptional.get();
+                // Remove the last grade in the list (undo the addition)
+                if (!updatedGradeList.isEmpty()) {
+                    updatedGradeList.remove(updatedGradeList.size() - 1);
+                }
+            }
+            gb.activityLog.add("Undo: removed last grade for " + name);
         });
+
+        // Log the addition of the grade
         activityLog.add("Added grade " + grade + " for " + name);
         return true;
     }
